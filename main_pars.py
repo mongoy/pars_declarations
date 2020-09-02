@@ -1,5 +1,7 @@
 import os
 import fnmatch
+from alive_progress import alive_bar
+import time
 
 import openpyxl as opx
 
@@ -51,11 +53,11 @@ def pars_xlsx():
             i = 1
 
             print("> Поиск строки с первой записью")
-            while (ws.cell(i, 1).value != 1) and (i <= ws.max_row):
+            while i <= ws.max_row:
                 """
                    Поиск строки с первой записью 
                 """
-                if ws.cell(i, 1).value == '№ п/п':
+                if ws.cell(i, 1).value == 1:
                     break
                 i += 1
 
@@ -88,98 +90,106 @@ def pars_xlsx():
             count = 0
             cn = 0  # номер записи в списке на выходе
 
-            while count < len(all_dec):
-                """ Преобразование предварительного списка """
-                # Заполнение списка в новом формате
-                if all_dec[count][0] == num_row_inp:
-                    """ Главная запись по сотруднику """
-                    # поиск записей по сотруднику
-                    for row_range in range(len(all_dec[count:])):
-                        """ Выделение диапазона строк по данному типу сотрудника """
-                        if (all_dec[count + row_range][1] in not_employees[1:]) or \
-                                ((all_dec[count + row_range][0] != num_row_inp) and
-                                 (all_dec[count + row_range][0] is not None)):
-                            break
+            with alive_bar(len(all_dec)) as bar:
+                while count < len(all_dec):
+                    """ Преобразование предварительного списка """
+                    # Заполнение списка в новом формате
+                    if all_dec[count][0] == num_row_inp:
+                        """ Главная запись по сотруднику """
+                        # поиск записей по сотруднику
+                        for row_range in range(len(all_dec[count:])):
+                            """ Выделение диапазона строк по данному типу сотрудника """
+                            if (all_dec[count + row_range][1] in not_employees[1:]) or \
+                                    ((all_dec[count + row_range][0] != num_row_inp) and
+                                     (all_dec[count + row_range][0] is not None)):
+                                break
 
-                    if (count + row_range) == (len(all_dec) - 1):
-                        row_range += 1
+                        if (count + row_range) == (len(all_dec) - 1):
+                            row_range += 1
 
-                    row_dec_new = [cn, min_naim, yd, all_dec[count][1], all_dec[count][2]]
-                    for prop in property_dec:
-                        """ Параметры декларации """
-                        for row in range(row_range):
-                            """ проверка на наличие данных """
-                            row_dec_inp = row_dec_new.copy()
-                            row_dec_inp.append(not_employees[0])  # Сотрудник
-                            row_dec_inp.append(prop)  # Параметры
-                            if (all_dec[count + row][property_dec[prop][0]] is not None) and \
-                                    (all_dec[count + row][property_dec[prop][0]] != ''):
-                                for col in property_dec[prop]:
-                                    """ Заполнение строки """
-                                    if col == 11:
-                                        row_dec_inp += (4 * [None])
-                                        row_dec_inp.append(all_dec[count + row][col])
-                                    elif col == 8:
-                                        row_dec_inp += [None]
-                                        row_dec_inp.append(all_dec[count + row][col])
-                                    else:
-                                        row_dec_inp.append(all_dec[count + row][col])
+                        row_dec_new = [cn, min_naim, yd, all_dec[count][1], all_dec[count][2]]
+                        for prop in property_dec:
+                            """ Параметры декларации """
+                            for row in range(row_range):
+                                """ проверка на наличие данных """
+                                row_dec_inp = row_dec_new.copy()
+                                row_dec_inp.append(not_employees[0])  # Сотрудник
+                                row_dec_inp.append(prop)  # Параметры
+                                if (all_dec[count + row][property_dec[prop][0]] is not None) and \
+                                        (all_dec[count + row][property_dec[prop][0]] != ''):
+                                    for col in property_dec[prop]:
+                                        """ Заполнение строки """
+                                        if col == 11:
+                                            row_dec_inp += (4 * [None])
+                                            row_dec_inp.append(all_dec[count + row][col])
+                                        elif col == 8:
+                                            row_dec_inp += [None]
+                                            row_dec_inp.append(all_dec[count + row][col])
+                                        else:
+                                            row_dec_inp.append(all_dec[count + row][col])
 
-                                cn += 1  # Следующая предварительная запись
-                                row_dec_inp[0] = cn
-                                # запись в файл
-                                for nr, rd in enumerate(row_dec_inp):
-                                    ws_out.cell(row=num_row_out, column=num_col_out + nr).value = rd
-                                num_row_out += 1
-                                # print(row_dec_inp)
+                                    cn += 1  # Следующая предварительная запись
+                                    row_dec_inp[0] = cn
+                                    # запись в файл
+                                    for nr, rd in enumerate(row_dec_inp):
+                                        ws_out.cell(row=num_row_out, column=num_col_out + nr).value = rd
+                                    num_row_out += 1
+                                    # print(row_dec_inp)
 
-                    count += row_range  # следующая исходная запись
-                    num_row_inp += 1  # следующая главная исходная запись
+                        bar()
+                        time.sleep(1)
 
-                if all_dec[count][1] in not_employees:
-                    """ Не сотрудник """
-                    not_employees_dec = all_dec[count][1]
-                    # поиск записей
-                    for row_range in range(len(all_dec[count:])):
-                        """ Выделение диапазона строк по данному типу сотрудника """
+                        count += row_range  # следующая исходная запись
+                        num_row_inp += 1  # следующая главная исходная запись
 
-                        if ((all_dec[count + row_range][1] in not_employees[1:]) and
-                            (all_dec[count + row_range][1] != not_employees_dec)) or\
-                                (all_dec[count + row_range][0] == num_row_inp):
-                            break
-                    if (count + row_range) == (len(all_dec) - 1):
-                        row_range += 1
-                    row_dec_new = row_dec_new.copy()
-                    row_dec_new[0] = cn
+                    if all_dec[count][1] in not_employees:
+                        """ Не сотрудник """
+                        not_employees_dec = all_dec[count][1]
+                        # поиск записей
+                        for row_range in range(len(all_dec[count:])):
+                            """ Выделение диапазона строк по данному типу сотрудника """
 
-                    for prop in property_dec:
-                        """ Параметры декларации """
-                        for row in range(row_range):
-                            """ проверка на наличие данных """
-                            row_dec_inp = row_dec_new.copy()
-                            row_dec_inp.append(all_dec[count][1])  # Сотрудник
-                            row_dec_inp.append(prop)
-                            if (all_dec[count + row][property_dec[prop][0]] is not None) and \
-                                    (all_dec[count + row][property_dec[prop][0]] != ''):
-                                for col in property_dec[prop]:
-                                    """ Заполнение строки """
-                                    if col == 11:
-                                        row_dec_inp += (4 * [None])
-                                        row_dec_inp.append(all_dec[count + row][col])
-                                    elif col == 8:
-                                        row_dec_inp += [None]
-                                        row_dec_inp.append(all_dec[count + row][col])
-                                    else:
-                                        row_dec_inp.append(all_dec[count + row][col])
+                            if ((all_dec[count + row_range][1] in not_employees[1:]) and
+                                (all_dec[count + row_range][1] != not_employees_dec)) or\
+                                    (all_dec[count + row_range][0] == num_row_inp):
+                                break
+                        if (count + row_range) == (len(all_dec) - 1):
+                            row_range += 1
+                        row_dec_new = row_dec_new.copy()
+                        row_dec_new[0] = cn
 
-                                cn += 1  # Следующая предварительная запись
-                                row_dec_inp[0] = cn
-                                # запись в файл
-                                for nr, rd in enumerate(row_dec_inp):
-                                    ws_out.cell(row=num_row_out, column=num_col_out + nr).value = rd
-                                num_row_out += 1
-                                # print(row_dec_inp)
-                    count += row_range  # следующая исходная запись
+                        for prop in property_dec:
+                            """ Параметры декларации """
+                            for row in range(row_range):
+                                """ проверка на наличие данных """
+                                row_dec_inp = row_dec_new.copy()
+                                row_dec_inp.append(all_dec[count][1])  # Сотрудник
+                                row_dec_inp.append(prop)
+                                if (all_dec[count + row][property_dec[prop][0]] is not None) and \
+                                        (all_dec[count + row][property_dec[prop][0]] != ''):
+                                    for col in property_dec[prop]:
+                                        """ Заполнение строки """
+                                        if col == 11:
+                                            row_dec_inp += (4 * [None])
+                                            row_dec_inp.append(all_dec[count + row][col])
+                                        elif col == 8:
+                                            row_dec_inp += [None]
+                                            row_dec_inp.append(all_dec[count + row][col])
+                                        else:
+                                            row_dec_inp.append(all_dec[count + row][col])
+
+                                    cn += 1  # Следующая предварительная запись
+                                    row_dec_inp[0] = cn
+                                    # запись в файл
+                                    for nr, rd in enumerate(row_dec_inp):
+                                        ws_out.cell(row=num_row_out, column=num_col_out + nr).value = rd
+                                    num_row_out += 1
+                                    # print(row_dec_inp)
+
+                        bar()
+                        time.sleep(1)
+
+                        count += row_range  # следующая исходная запись
 
             # Сохраним полный список
             file_xls = os.path.join(BASE_DIR, "output\\declaration.xlsx")
