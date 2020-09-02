@@ -136,8 +136,8 @@ def pars_xlsx():
                                     num_row_out += 1
                                     # print(row_dec_inp)
 
-                        bar()
-                        time.sleep(1)
+                        # bar()
+                        # time.sleep(1)
 
                         count += row_range  # следующая исходная запись
                         num_row_inp += 1  # следующая главная исходная запись
@@ -186,8 +186,8 @@ def pars_xlsx():
                                     num_row_out += 1
                                     # print(row_dec_inp)
 
-                        bar()
-                        time.sleep(1)
+                        # bar()
+                        # time.sleep(1)
 
                         count += row_range  # следующая исходная запись
 
